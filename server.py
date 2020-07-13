@@ -11,11 +11,11 @@ app = Sanic(__name__)
 
 @app.route('/get_video', methods=['POST'])
 async def get_video(request):
-    frames = []
-    boxes = []
+    frames, boxes = [], []
     videoname = request.json['videoname']
 
     cap = cv2.VideoCapture(videoname + '.mp4')
+    frame_shape = (int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), 3)
     anno = pd.read_csv(videoname + '.csv')
 
     for i_frame, frame_data in tqdm(anno.groupby('i_frame'), desc=f'Read {videoname}'):
@@ -24,10 +24,8 @@ async def get_video(request):
             cap.set(cv2.CAP_PROP_POS_FRAMES, i_frame)
         _, frame = cap.read()
 
-        # encode to jpg bytes
-        frame_jpg = cv2.imencode('.jpg', frame)[1].tobytes()
         # bytes to utf8 string
-        frames.append(base64.b64encode(frame_jpg).decode())
+        frames.append(base64.b64encode(frame.tobytes()).decode())
 
         # read all boxes in the frame
         frame_boxes = []
@@ -35,7 +33,9 @@ async def get_video(request):
             frame_boxes.append(frame_data.loc[idx].bbox)
         boxes.append(frame_boxes)
 
-    return HTTPResponse(ujson.dumps({'frames': frames, 'boxes': boxes}), status=201)
+    return HTTPResponse(ujson.dumps({'frames': frames,
+                                     'boxes': boxes,
+                                     'frame_shape': frame_shape}), status=201)
 
 
 if __name__ == '__main__':
