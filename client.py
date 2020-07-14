@@ -8,6 +8,7 @@ response = requests.post('http://127.0.0.1:2299/get_video', json={'videoname': v
 response = response.json()
 
 cap = cv2.VideoCapture(response['result_video'])
+assert int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) == len(response['boxes'])
 visualization, decode_time = True, 0
 for frame_boxes in tqdm(response['boxes']):
     t = default_timer()
